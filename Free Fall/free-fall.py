@@ -3,13 +3,16 @@ from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, Q
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPainter, QColor, QIcon
 
-GRAVITY = 0.2  # px/frame², in calculation we assume g=10
+dt = 0.016 # 0.016=60 FPS, dalam detik
+GRAVITY = 9.81 # px
+ball_start_y = 150
+velocity_start = 0
 
 class SimulationCanvas(QFrame):
     def __init__(self): # awal berjalan
         super().__init__()
         self.setStyleSheet("background-color: black;")
-        self.ball_y = 50
+        self.ball_y = ball_start_y
         self.ball_radius = 20
         self.velocity = 0
         self.mass = 10
@@ -17,8 +20,9 @@ class SimulationCanvas(QFrame):
         self.start_time = time.time()
 
     def update_physics(self):
-        self.velocity += GRAVITY  # acceleration
-        self.ball_y += self.velocity
+        self.velocity_prev = self.velocity
+        self.velocity += GRAVITY * dt  # acceleration
+        self.ball_y += self.velocity * dt
 
         # Bounce on bottom
         if self.ball_y + self.ball_radius > self.height():
@@ -54,12 +58,14 @@ class SimulationCanvas(QFrame):
     
     def go_simul(self):
         self.start_time = time.time()
-        self.velocity = 0
-        self.ball_y = 50
+        self.velocity = velocity_start
+        self.ball_y = ball_start_y
 
+        self.parent().config.distance = 0
+    
         self.parent().config.timer_label.setText("0.000 s")
 
-        self.parent().timer.start(16)  # ~60 FPS
+        self.parent().timer.start(dt*1000)  # ~60 FPS
 
 class MassConfigurator(QWidget):
     def __init__(self, canvas: SimulationCanvas):
@@ -173,15 +179,16 @@ class MassConfigurator(QWidget):
         self.elapsed = time.time() - self.canvas.start_time
         self.timer_label.setText(f"{self.elapsed:.3f} s")
 
-    real_velo = 0
     def update_velocity(self):
-        self.real_velo += 10
         # self.velo_label.setText(f"{GRAVITY * self.elapsed:.3f} m/s")
-        self.velo_label.setText(f"{self.real_velo:.3f} m/s")
+        self.velo_label.setText(f"{self.parent().canvas.velocity:.3f} m/s")
 
+    distance = 0
     def update_distance(self):
-        self.dist_label.setText(f"{1/2 * 10 * self.elapsed**2:.3f} m")
-
+        self.distance += (abs(self.parent().canvas.velocity) + abs(self.parent().canvas.velocity_prev)) / 2 * dt
+        # self.dist_label.setText(f"{1/2 * GRAVITY * self.elapsed**2:.3f} m")
+        self.dist_label.setText(f"{self.distance:.3f} m")
+        
     def stop_timer(self):
         self.parent().timer.stop()
 

@@ -18,7 +18,7 @@ class SimulationCanvas(QFrame):
 
     def reset_params(self):
         self.ball_x = 50
-        self.ball_y = 50
+        self.ball_y = 400
         self.vx = 3.0        # horizontal speed
         self.vy = -8.0       # vertical speed (negative = upward)
         self.bouncy = 0.7    # bounce factor
@@ -33,19 +33,34 @@ class SimulationCanvas(QFrame):
         if self.ball_y + self.ball_radius > self.height():
             self.ball_y = self.height() - self.ball_radius
 
-            if abs(self.vy) < 0.5 or self.bouncy == 0:
+            if (abs(self.vy) < 0.5 and abs(self.vx) < 0.5) or self.bouncy == 0:
                 self.vy = 0
-                self.vx = 0
                 self.parent().config.update_velocity()
                 self.parent().config.stop_timer()
             else:
                 self.vy *= -self.bouncy
 
         # stop if leaves right side
-        if self.ball_x - self.ball_radius > self.width():
-            self.vx = 0
-            self.vy = 0
-            self.parent().config.stop_timer()
+        if self.ball_x + self.ball_radius > self.width():
+            self.ball_x = self.width() - self.ball_radius 
+            
+            if (abs(self.vx) < 0.5 and abs(self.vy) < 0.5) or self.bouncy == 0:
+                self.vx = 0
+                self.parent().config.update_velocity()
+                self.parent().config.stop_timer()
+            else:
+                self.vx *= -self.bouncy
+                
+        # stop if leaves left side
+        elif self.ball_x - self.ball_radius < 0:
+            self.ball_x = self.ball_radius 
+            
+            if (abs(self.vx) < 0.5 and abs(self.vy) < 0.5) or self.bouncy == 0:
+                self.vx = 0
+                self.parent().config.update_velocity()
+                self.parent().config.stop_timer()
+            else:
+                self.vx *= -self.bouncy
 
         self.update()
 
@@ -129,22 +144,39 @@ class MassConfigurator(QWidget):
         velo_formula.setAlignment(Qt.AlignLeft)
         velo_formula.setAutoFillBackground(True)
 
-        # --------------------- Distance ----------------
-        dist_sentence = QLabel("Horizontal Distance =")
-        dist_sentence.setStyleSheet("font-size: 18px; color: black;")
+        # --------------------- X Distance ----------------
+        xdist_sentence = QLabel("X Distance =")
+        xdist_sentence.setStyleSheet("font-size: 18px; color: black;")
 
-        self.dist_label = QLabel("0.000 m")
-        self.dist_label.setStyleSheet("font-size: 18px; color: black;")
-        self.dist_label.setAlignment(Qt.AlignLeft)
+        self.xdist_label = QLabel("0.000 m")
+        self.xdist_label.setStyleSheet("font-size: 18px; color: black;")
+        self.xdist_label.setAlignment(Qt.AlignLeft)
 
-        dist_layout = QHBoxLayout()
-        dist_layout.addWidget(dist_sentence)
-        dist_layout.addWidget(self.dist_label)
+        xdist_layout = QHBoxLayout()
+        xdist_layout.addWidget(xdist_sentence)
+        xdist_layout.addWidget(self.xdist_label)
 
-        dist_formula = QLabel("x = vₓ · t")
-        dist_formula.setStyleSheet("font-size: 24px; background-color: white; border: 1px solid black;")
-        dist_formula.setAlignment(Qt.AlignLeft)
-        dist_formula.setAutoFillBackground(True)
+        xdist_formula = QLabel("x = v₀ cos α t")
+        xdist_formula.setStyleSheet("font-size: 24px; background-color: white; border: 1px solid black;")
+        xdist_formula.setAlignment(Qt.AlignLeft)
+        xdist_formula.setAutoFillBackground(True)
+
+        # --------------------- Y Distance ----------------
+        ydist_sentence = QLabel("Y Distance =")
+        ydist_sentence.setStyleSheet("font-size: 18px; color: black;")
+
+        self.ydist_label = QLabel("0.000 m")
+        self.ydist_label.setStyleSheet("font-size: 18px; color: black;")
+        self.ydist_label.setAlignment(Qt.AlignLeft)
+
+        ydist_layout = QHBoxLayout()
+        ydist_layout.addWidget(ydist_sentence)
+        ydist_layout.addWidget(self.ydist_label)
+
+        ydist_formula = QLabel("y = v₀ sin α - ½ g t")
+        ydist_formula.setStyleSheet("font-size: 24px; background-color: white; border: 1px solid black;")
+        ydist_formula.setAlignment(Qt.AlignLeft)
+        ydist_formula.setAutoFillBackground(True)
 
         # ----------------------------------------------------
         layout = QVBoxLayout()
@@ -153,9 +185,11 @@ class MassConfigurator(QWidget):
         layout.addWidget(self.go_button)
         layout.addLayout(timer_layout)
         layout.addLayout(velo_layout)
-        layout.addLayout(dist_layout)
+        layout.addLayout(xdist_layout)
+        layout.addLayout(ydist_layout)
         layout.addWidget(velo_formula)
-        layout.addWidget(dist_formula)
+        layout.addWidget(xdist_formula)
+        layout.addWidget(ydist_formula)
         layout.addStretch()
         self.setLayout(layout)
 
@@ -172,7 +206,8 @@ class MassConfigurator(QWidget):
         self.velo_label.setText(f"{v:.3f} m/s")
 
     def update_distance(self):
-        self.dist_label.setText(f"{self.canvas.ball_x:.3f} m")
+        self.xdist_label.setText(f"{self.canvas.ball_x:.3f} m")
+        self.ydist_label.setText(f"{self.canvas.ball_y:.3f} m")
 
     def stop_timer(self):
         self.parent().timer.stop()
@@ -182,7 +217,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Projectile Simulation")
-        self.setGeometry(300, 200, 800, 500)
+        self.setGeometry(300, 200, 800, 500) 
         self.setWindowIcon(QIcon("icon.ico"))
 
         # Left: Simulation
